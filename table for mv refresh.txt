@@ -1,0 +1,29 @@
+
+
+select DEP_TBL_NAME
+from (
+    select mv.mv_name, mv.schema_name, DEP_TBL_OWNER, DEP_TBL_NAME
+            , dense_rank() over (order by mv.schema_name, mv.load_dep_level, mv.load_dep_order, mv.mv_schema_order) rnk
+    from def_load_mv mv
+    where mv.active_flag = 'Y'
+          and mv.mv_name <> 'NONE'
+          and mv.refresh_type <> 'NONE'
+          and ',#BI_DWH.VAR_LOAD_MV_SCHEMA,' like '%,' || mv.SCHEMA_NAME || ',%'
+          and exists (
+              select 1
+              from (
+                    select load_step_code, mv_name, schema_name, load_step_code mv_group
+                    from def_load_mv
+                    union
+                    select load_step_code, mv_name, schema_name, regexp_substr(MV_GROUPS,'[^,]+', 1, level) mv_group
+                    from def_load_mv
+                    connect by regexp_substr(MV_GROUPS, '[^,]+', 1, level) is not null
+              ) mv2
+              where (',#BI_DWH.VAR_LOAD_MV_STEP_CODE,' like '%,' || mv2.mv_group || ',%')
+                    and mv2.load_step_code = mv.load_step_code
+                    and mv2.mv_name = mv.mv_name
+                    and mv2.schema_name = mv.schema_name
+          )
+    order by mv.schema_name, mv.load_dep_level, mv.load_dep_order, mv.mv_schema_order
+)
+where rnk = #BI_DWH.VAR_LOAD_MV_COUNTER
