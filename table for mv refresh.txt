@@ -1,6 +1,6 @@
 
 
-select DEP_TBL_NAME
+select DEP_TBL_NAME_1
 from (
     select mv.mv_name, mv.schema_name, DEP_TBL_OWNER, DEP_TBL_NAME
             , dense_rank() over (order by mv.schema_name, mv.load_dep_level, mv.load_dep_order, mv.mv_schema_order) rnk
